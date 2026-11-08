@@ -37,3 +37,4 @@ export const StatusBadge: React.FC<{ status: RequestStatus }> = ({ status }) => 
     </span>
   );
 };
+

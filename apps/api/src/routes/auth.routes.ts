@@ -13,3 +13,4 @@ authRouter.post('/login', validateBody(loginSchema), (req, res, next) => {
 authRouter.get('/me', authenticateToken, (req, res, next) => {
   authController.getProfile(req, res, next);
 });
+

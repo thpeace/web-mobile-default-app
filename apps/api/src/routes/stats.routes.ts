@@ -18,3 +18,4 @@ statsRouter.get('/employee', requireRole('EMPLOYEE', 'ADMIN'), (req, res, next) 
 statsRouter.get('/client', requireRole('CLIENT', 'ADMIN'), (req, res, next) => {
   statsController.getClientStats(req, res, next);
 });
+

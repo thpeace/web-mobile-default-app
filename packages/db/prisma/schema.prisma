@@ -55,3 +55,4 @@ model Request {
   updatedAt   DateTime      @updatedAt
   resolvedAt  DateTime?     // Used to calculate resolution time KPIs
 }
+

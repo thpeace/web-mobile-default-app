@@ -15,3 +15,4 @@ userRouter.get('/:id', (req, res, next) => userController.getUserById(req, res, 
 userRouter.post('/', validateBody(createUserSchema), (req, res, next) => userController.createUser(req, res, next));
 userRouter.patch('/:id', validateBody(updateUserSchema), (req, res, next) => userController.updateUser(req, res, next));
 userRouter.delete('/:id', (req, res, next) => userController.deleteUser(req, res, next));
+

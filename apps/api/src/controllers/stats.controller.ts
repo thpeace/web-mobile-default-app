@@ -40,3 +40,4 @@ export class StatsController {
 }
 
 export const statsController = new StatsController();
+

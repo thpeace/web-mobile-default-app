@@ -295,3 +295,4 @@ export const ClientDashboard: React.FC = () => {
     </div>
   );
 };
+
