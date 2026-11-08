@@ -1,24 +1,23 @@
 'use client';
 
-import React from 'react';
-import Link from 'next/navigation';
+import React, { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { RoleBadge } from './RoleBadge';
+import { MobileAppModal } from './MobileAppModal';
 import {
   LayoutDashboard,
   Users,
   LogOut,
   Layers,
-  ShieldCheck,
-  CheckCircle2,
-  FolderKanban,
+  Smartphone,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const [isMobileModalOpen, setIsMobileModalOpen] = useState(false);
 
   if (!user) return null;
 
@@ -38,65 +37,91 @@ export const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 min-h-screen flex flex-col justify-between shadow-sm">
-      <div>
-        {/* Brand Header */}
-        <div className="h-16 flex items-center px-6 border-b border-slate-100 gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-500/20">
-            <Layers className="w-5 h-5" />
+    <>
+      <aside className="w-64 bg-white border-r border-slate-200 min-h-screen flex flex-col justify-between shadow-sm">
+        <div>
+          {/* Brand Header */}
+          <div className="h-16 flex items-center px-6 border-b border-slate-100 gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-500/20">
+              <Layers className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-slate-900 leading-tight">CrossPlatform</h1>
+              <p className="text-xs text-slate-500 font-medium">Enterprise Suite</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-base font-bold text-slate-900 leading-tight">CrossPlatform</h1>
-            <p className="text-xs text-slate-500 font-medium">Enterprise Suite</p>
-          </div>
+
+          {/* Navigation Links */}
+          <nav className="p-4 space-y-1">
+            {navItems
+              .filter((item) => item.show)
+              .map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                return (
+                  <button
+                    key={item.href}
+                    onClick={() => router.push(item.href)}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      isActive
+                        ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                    {item.name}
+                  </button>
+                );
+              })}
+
+            {/* Mobile Application Package Action */}
+            <div className="pt-4 mt-4 border-t border-slate-100">
+              <p className="px-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                Companion App
+              </p>
+              <button
+                onClick={() => setIsMobileModalOpen(true)}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <Smartphone className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                  <span>Mobile Package</span>
+                </div>
+                <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">
+                  Ready
+                </span>
+              </button>
+            </div>
+          </nav>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="p-4 space-y-1">
-          {navItems
-            .filter((item) => item.show)
-            .map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              return (
-                <button
-                  key={item.href}
-                  onClick={() => router.push(item.href)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
-                  {item.name}
-                </button>
-              );
-            })}
-        </nav>
-      </div>
-
-      {/* User Footer Profile */}
-      <div className="p-4 border-t border-slate-100">
-        <div className="p-3 bg-slate-50 rounded-xl mb-3 border border-slate-200/60">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-semibold text-slate-900 truncate max-w-[130px]">
-              {user.name}
-            </span>
-            <RoleBadge role={user.role} />
+        {/* User Footer Profile */}
+        <div className="p-4 border-t border-slate-100">
+          <div className="p-3 bg-slate-50 rounded-xl mb-3 border border-slate-200/60">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-semibold text-slate-900 truncate max-w-[130px]">
+                {user.name}
+              </span>
+              <RoleBadge role={user.role} />
+            </div>
+            <p className="text-xs text-slate-500 truncate">{user.email}</p>
           </div>
-          <p className="text-xs text-slate-500 truncate">{user.email}</p>
-        </div>
 
-        <button
-          onClick={logout}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-        >
-          <LogOut className="w-4 h-4" />
-          Sign Out
-        </button>
-      </div>
-    </aside>
+          <button
+            onClick={logout}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile Application Package Details Modal */}
+      <MobileAppModal
+        isOpen={isMobileModalOpen}
+        onClose={() => setIsMobileModalOpen(false)}
+      />
+    </>
   );
 };
-

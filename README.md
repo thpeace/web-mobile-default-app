@@ -46,6 +46,7 @@ A production-ready implementation of the **Cross-Platform Architecture Blueprint
 │   ├── db/                           # Prisma Schema, client, and seed scripts
 │   └── api-client/                   # Shared typed Axios client for Web & Mobile
 │
+├── .gitlab-ci.yml                 # GitLab CI/CD Pipeline (Build Web & Package Mobile)
 ├── docker-compose.yml                # PostgreSQL container service definition
 ├── turbo.json                        # Turborepo task pipeline
 └── pnpm-workspace.yaml               # Monorepo workspace configuration
@@ -126,6 +127,31 @@ pnpm dev:mobile
 To verify the entire monorepo builds and typechecks cleanly across all apps and packages:
 ```bash
 pnpm build
+```
+
+---
+
+## 🦊 GitLab CI/CD Pipeline & Application Packaging
+
+The repository includes a comprehensive, multi-stage [`.gitlab-ci.yml`](.gitlab-ci.yml) pipeline designed for pnpm monorepos:
+
+### Pipeline Stages
+1. **`setup:dependencies`**: Caches pnpm store, approves build scripts, runs `prisma generate`, and compiles shared packages (`@app/types`, `@app/validation`, `@app/db`, `@app/api-client`).
+2. **`validate:typecheck`**: Enforces strict TypeScript verification across all apps and packages in parallel via Turborepo.
+3. **`build:web`**: Builds the production-optimized Next.js desktop web app and exports artifacts (`apps/web/.next`) with `expose_as: "Web Application Build"`.
+4. **`package:mobile`**: Packages the Expo/React Native mobile application into native Hermes bytecode (Android & iOS), web companion bundles, and generates a downloadable `mobile-app-package.zip` with `expose_as: "Mobile Application Package"`. Also uploads to the GitLab Generic Package Registry.
+5. **`build:api`**: Compiles the Node.js Express API service into `apps/api/dist`.
+
+### Packaging Commands
+```bash
+# Package mobile app locally (generates Hermes bytecode + assets)
+pnpm package:mobile
+
+# Archive into mobile-app-package.zip
+node scripts/archive-mobile.js
+
+# Build Web app
+pnpm build:web
 ```
 
 ---

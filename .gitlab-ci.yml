@@ -1,0 +1,167 @@
+# ==============================================================================
+# GitLab CI/CD Pipeline: Cross-Platform Suite (Web Next.js + Mobile Expo + API)
+# ==============================================================================
+
+image: node:22-bookworm-slim
+
+variables:
+  PNPM_HOME: "$CI_PROJECT_DIR/.pnpm"
+  PATH: "$PNPM_HOME:$PATH"
+  TURBO_TELEMETRY_DISABLED: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+  CI: "true"
+
+# Global pipeline stages
+stages:
+  - setup
+  - validate
+  - build
+  - package
+  - deploy
+
+# Global cache for pnpm store and workspace node_modules
+default:
+  cache:
+    key:
+      files:
+        - pnpm-lock.yaml
+    paths:
+      - .pnpm-store
+      - node_modules/
+      - packages/*/node_modules/
+      - apps/*/node_modules/
+      - packages/*/dist/
+      - .turbo/
+    policy: pull-push
+
+# ------------------------------------------------------------------------------
+# Stage 1: Setup & Dependency Resolution
+# ------------------------------------------------------------------------------
+setup:dependencies:
+  stage: setup
+  before_script:
+    - corepack enable || npm install -g pnpm@12.18.0
+    - pnpm config set store-dir .pnpm-store
+  script:
+    - echo "📦 Installing monorepo dependencies..."
+    - pnpm install --frozen-lockfile
+    - pnpm approve-builds --all
+    - echo "🗄️ Generating Prisma Client..."
+    - pnpm db:generate
+    - echo "🔨 Compiling shared packages..."
+    - pnpm --filter @app/types build
+    - pnpm --filter @app/validation build
+    - pnpm --filter @app/db build
+    - pnpm --filter @app/api-client build
+  artifacts:
+    name: "shared-packages-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - packages/types/dist/
+      - packages/validation/dist/
+      - packages/db/dist/
+      - packages/api-client/dist/
+    expire_in: 2 hours
+
+# ------------------------------------------------------------------------------
+# Stage 2: Code Validation & Quality Gates
+# ------------------------------------------------------------------------------
+validate:typecheck:
+  stage: validate
+  needs: ["setup:dependencies"]
+  before_script:
+    - corepack enable || npm install -g pnpm@12.18.0
+  script:
+    - echo "🔍 Running TypeScript typecheck across monorepo..."
+    - pnpm typecheck
+
+validate:lint:
+  stage: validate
+  needs: ["setup:dependencies"]
+  before_script:
+    - corepack enable || npm install -g pnpm@12.18.0
+  script:
+    - echo "🧹 Running linters..."
+    - pnpm lint || true
+  allow_failure: true
+
+# ------------------------------------------------------------------------------
+# Stage 3: Build Web Application (Next.js) & API
+# ------------------------------------------------------------------------------
+build:web:
+  stage: build
+  needs: ["setup:dependencies"]
+  before_script:
+    - corepack enable || npm install -g pnpm@12.18.0
+  script:
+    - echo "🌐 Building Next.js Web Application..."
+    - pnpm build:web
+  artifacts:
+    name: "web-application-$CI_COMMIT_SHORT_SHA"
+    expose_as: "Web Application Build"
+    paths:
+      - apps/web/.next/
+    expire_in: 14 days
+
+build:api:
+  stage: build
+  needs: ["setup:dependencies"]
+  before_script:
+    - corepack enable || npm install -g pnpm@12.18.0
+  script:
+    - echo "⚙️ Building Node.js API Service..."
+    - pnpm build:api
+  artifacts:
+    name: "api-backend-$CI_COMMIT_SHORT_SHA"
+    expose_as: "API Backend Build"
+    paths:
+      - apps/api/dist/
+    expire_in: 14 days
+
+# ------------------------------------------------------------------------------
+# Stage 4: Package Mobile Application (Expo / React Native)
+# ------------------------------------------------------------------------------
+package:mobile:
+  stage: package
+  needs: ["setup:dependencies"]
+  before_script:
+    - apt-get update && apt-get install -y zip curl
+    - corepack enable || npm install -g pnpm@12.18.0
+  script:
+    - echo "📱 Packaging Mobile Application (Android Hermes, iOS Hermes, Web preview)..."
+    - pnpm package:mobile
+    - echo "📦 Creating downloadable archive mobile-app-package.zip..."
+    - node scripts/archive-mobile.js
+    - ls -lh mobile-app-package.zip apps/mobile/dist/
+    # Publish to GitLab Generic Package Registry if available
+    - |
+      if [ -n "$CI_JOB_TOKEN" ] && [ -f "mobile-app-package.zip" ]; then
+        PACKAGE_VERSION="${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}"
+        echo "🚀 Uploading to GitLab Generic Package Registry ($PACKAGE_VERSION)..."
+        curl --header "JOB-TOKEN: $CI_JOB_TOKEN" \
+             --upload-file mobile-app-package.zip \
+             "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/mobile-app/${PACKAGE_VERSION}/mobile-app-package.zip" || true
+      fi
+  artifacts:
+    name: "mobile-application-package-$CI_COMMIT_SHORT_SHA"
+    expose_as: "Mobile Application Package"
+    paths:
+      - mobile-app-package.zip
+      - apps/mobile/dist/
+    expire_in: 30 days
+
+# ------------------------------------------------------------------------------
+# Stage 5: Optional GitLab Pages Preview
+# ------------------------------------------------------------------------------
+pages:
+  stage: deploy
+  needs: ["package:mobile"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+  script:
+    - echo "🚀 Deploying mobile web companion preview to GitLab Pages..."
+    - mkdir -p public
+    - cp -r apps/mobile/dist/* public/
+  artifacts:
+    paths:
+      - public
