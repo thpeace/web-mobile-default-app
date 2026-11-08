@@ -1,0 +1,57 @@
+// packages/db/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+  CLIENT
+}
+
+enum RequestStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // Hashed via bcrypt/argon2
+  name      String
+  role      Role     @default(CLIENT)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Business Relations
+  clientRequests Request[] @relation("ClientRequests")
+  assignedTasks  Request[] @relation("EmployeeAssignments")
+}
+
+model Request {
+  id          String        @id @default(uuid())
+  title       String
+  description String?
+  status      RequestStatus @default(PENDING)
+  
+  // The client who created the request
+  clientId    String
+  client      User          @relation("ClientRequests", fields: [clientId], references: [id])
+  
+  // The employee processing the request
+  employeeId  String?
+  employee    User?         @relation("EmployeeAssignments", fields: [employeeId], references: [id])
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  resolvedAt  DateTime?     // Used to calculate resolution time KPIs
+}

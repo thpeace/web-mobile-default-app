@@ -1,0 +1,33 @@
+{
+  "name": "web-mobile-default-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cross-Platform Architecture Blueprint (Web Next.js + Mobile Expo + API + Shared Packages)",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:api": "pnpm --filter @app/api dev",
+    "dev:web": "pnpm --filter @app/web dev",
+    "dev:mobile": "pnpm --filter @app/mobile start",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "pnpm --filter @app/db db:generate",
+    "db:push": "pnpm --filter @app/db db:push",
+    "db:seed": "pnpm --filter @app/db db:seed",
+    "db:studio": "pnpm --filter @app/db db:studio"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.4",
+    "typescript": "^5.7.3",
+    "@types/node": "^22.13.4"
+  },
+  "packageManager": "pnpm@12.18.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}
